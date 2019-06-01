@@ -3,7 +3,6 @@
 #include <ctime>
 #include <cstdlib>
 #include <pthread.h>
-#include <cmath>
 #include "utils.h"
 
 using namespace std;
@@ -81,7 +80,7 @@ void *work(void *m1){
 			break;
 		}
 	}
-	cout << "===============\n\t" << l << "\n===============\n";
+	//cout << "===============\n\t" << l << "\n===============\n";
 	pthread_exit(NULL);
 }
 
@@ -112,7 +111,7 @@ int main(){
 	int x = countPrimesSerial(matrix);	//CALCULO SERIAL
 	t2 = time(NULL) - t1;				//FIM DA CONTAGEM
 	
-	cout << "Serial:\n " << x << " números primos encontrados.\n" 
+	cout << "SERIAL:\n\t" << x << " números primos encontrados.\n\t" 
 		 << time(NULL) - t1 << " segundos de processamento.\n";
 
 	t1 = time(NULL);					//INICIO DA CONTAGEM CALCULO PARALELO	
@@ -123,7 +122,6 @@ int main(){
 
 		m[t].thread_id = t;				//ID DA THREAD PRA FINS DE DEPURAÇÃO
 			
-		cout << "\n[" << m[t].thread_id << "]\n";
 		rc = pthread_create(&threads[t], NULL, work, (void *)&m[t]);
 		
 		if(rc){
@@ -134,10 +132,10 @@ int main(){
 
 	for(int i = 0; i < NUM_THREADS; i++)
 		(void) pthread_join(threads[i], NULL);
-//	cout << maxCounter << "\n";
+
 	t2 = time(NULL) - t1;	
 
-	cout << count << " números primos encontrados.\n" << t2<< " segundos de processamento.\n";
+	cout << "PARALELA:\n\t" << count << " números primos encontrados.\n\t" << t2<< " segundos de processamento.\n";
 
 
 	deallocMatrix(&matrix, N);
