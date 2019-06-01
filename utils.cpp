@@ -5,7 +5,7 @@
 
 bool primeNumber(unsigned num){
 	if(num > 1){
-		for(int i = 2; i*i <= num; i++)
+		for(int i = 2; i < num; i++)
 			if(!(num%i))
 				return false;
 		
@@ -33,8 +33,9 @@ void deallocMatrix(unsigned ***matrix, unsigned size){
 	unsigned **matrix_ = *matrix;
 
 	for(int i = 0; i < size; i++){
-		std::cout << "\ndeletando a posicao..." << i;	
+//		std::cout << "\ndeletando a posicao..." << i;	
 		delete []matrix_[i];
 	}
+	std::cout << "\n";
 	delete []matrix_;
 }
