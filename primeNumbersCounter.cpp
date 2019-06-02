@@ -8,7 +8,7 @@
 using namespace std;
 
 //DEFINIÇÕES
-#define N 		1000		//tamanho da matriz
+#define N 		50		//tamanho da matriz
 #define SEED 	1408 		//altere essa semente para uma de sua escolha
 #define XCEIL  	2			//Tamanho do macrobloco no eixo x
 #define YCEIL  	2			//Tamanho do macrobloco no eixo y
@@ -20,14 +20,17 @@ typedef struct _macrobloco{
 }macrobloco;
 
 //VARIÁVEIS GLOBAIS
+pthread_mutex_t mutex_counter;
 pthread_mutex_t mutex;
 unsigned **matrix;
 unsigned lastX = 0;
 unsigned lastY = 0;
 unsigned long count = 0;
 
-void printMatrix(unsigned **prime){
-	for(int i = 0; i < N; i++){
+//FUNÇÕES
+
+void printMatrix(unsigned **prime){			//IMPRIME A MATRIZ NA TELA
+	for(int i = 0; i < N; i++){					//APENAS PARA MATRIZES PEQUENAS
 		for(int j = 0; j < N; j++){
 			cout << prime[i][j] << "\t";
 		}
@@ -35,7 +38,7 @@ void printMatrix(unsigned **prime){
 	}
 }
 
-int countPrimesSerial(unsigned **Matrix){
+int countPrimesSerial(unsigned **Matrix){	//CONTA OS PRIMOS DA MATRIZ TODA
 	int s = 0;
 	for(int i = 0; i < N; i++){
 		for(int j = 0; j < N; j++)
@@ -44,51 +47,54 @@ int countPrimesSerial(unsigned **Matrix){
 	return s;
 }
 
-unsigned countPrimes(void *m1){
+unsigned countPrimes(void *m1){				//CONTA OS PRIMOS DE APENAS UM BLOCO
 	macrobloco *m = (macrobloco *)m1;
 	unsigned long yay = 0;
 
-	for(int i = 0; i < YCEIL && m -> index_y + i < N; i++){
+	for(int i = 0; i < YCEIL && m -> index_y + i < N; i++)
 		for(int j = 0; j < XCEIL && m -> index_x + j < N; j++)
-			//cout << i << "-" << j << "\n";
-			if(primeNumber(matrix[i + m -> index_y][j + m -> index_x])){
+			if(primeNumber(matrix[i + m -> index_y][j + m -> index_x]))
 				yay++;	
-			}
-	}
-
+	
 	return yay;
 }
 
 
 void *work(void *m1){
-	macrobloco *m = (macrobloco *)m1;
-	unsigned l = 0, s;
+	macrobloco *m = (macrobloco *)m1;			//ESTRUTURA COM OS PARÂMETROS DA FUNÇÃO
+	unsigned l = 0, s;							//AUXILIARES PRA FIM DE DEPURAÇÃO
 	while(true){
-		l += s = countPrimes((void *)m);		
-		pthread_mutex_lock(&mutex);
-		count += s;
-		if(lastX + XCEIL < N){
-			m -> index_x = lastX += XCEIL;
-			pthread_mutex_unlock(&mutex);	
-		}else if(lastY + YCEIL < N){
-			
-			m -> index_x = lastX  = 0;
-			m -> index_y = lastY += YCEIL;
-			pthread_mutex_unlock(&mutex);	
-		}else{
-			pthread_mutex_unlock(&mutex);
+		s = countPrimes((void *)m);		//RESULTADO DO MACROBLOCO
+
+		pthread_mutex_lock(&mutex_counter);				//ENTRANDO NA REGIÃO CRITICA PRA CONSULTAR/ALTERAR AS GLOBAIS
+		count += s;								//SOMA RESULTADO DO MACROBLOCO AO CONTADOR GLOBAL
+		pthread_mutex_unlock(&mutex_counter);		
+		pthread_mutex_unlock(&mutex);
+		if(lastX + XCEIL < N){					//SE AINDA HOUVER COLUNA PRA SER PROCESSADA,
+			m -> index_x = lastX + XCEIL;			//VAMO LÁ
+			lastX += XCEIL;
+			pthread_mutex_unlock(&mutex);		//SAI DA REGIÃO CRÍTICA
+		}else if(lastY + YCEIL < N){			//SE HOUVER COLUNAS,
+													//VAMO LÁ
+			m -> index_x = 0;					
+			lastX = 0;
+			m -> index_y = lastY + YCEIL;
+			lastY += YCEIL;
+			pthread_mutex_unlock(&mutex);		//SAI DA REGIÃO CRÍTICA
+		}else{									//PROCESSOU TUDO QUE TINHA
+			pthread_mutex_unlock(&mutex);		//SÓ SAI
 			break;
 		}
 	}
 	//cout << "===============\n\t" << l << "\n===============\n";
-	pthread_exit(NULL);
+	pthread_exit(NULL);							//ENCERRA A THREAD
 }
 
 int main(){
 	srand(SEED);					//SEMENTE
 
 	//VARIÁVEIS
-	int NUM_THREADS = 2;			//NÚMERO DE THREADS
+	long int NUM_THREADS = 2;			//NÚMERO DE THREADS
 	int rc, t = 0;					//AUXILIARES PARA CRIAÇÃO DAS THREADS
 										//ID DA THREAD E RETORNO DA FUNÇÃO
 										//DE CRIAÇÃO
@@ -104,7 +110,8 @@ int main(){
 	//printMatrix(matrix);			//SÓ PRA VISUALIZAR/DEPURAR MATRIZES MENORES 
 	
 
-	pthread_mutex_init(&mutex, NULL);	//INICIALIZAÇÃO DO MUTEX
+	pthread_mutex_init(&mutex_counter, NULL);	//INICIALIZAÇÃO DO MUTEX DO CONTADOR
+	pthread_mutex_init(&mutex, NULL);	//INICIALIZAÇÃO DO MUTEX DOS PISOS
 
 	t1 = time(NULL);					//INICIO DA CONTAGEM DO CALCULO SERIAL
 
@@ -131,13 +138,14 @@ int main(){
 	}
 
 	for(int i = 0; i < NUM_THREADS; i++)
-		(void) pthread_join(threads[i], NULL);
+		(void) pthread_join(threads[i], NULL);	//AGUARDA O PROCESSAMENTO DAS 
+													//THREADS.
 
-	t2 = time(NULL) - t1;	
+	t2 = time(NULL) - t1;				//FIM DA CONTAGEM CÁLCULO PARALELO
 
 	cout << "PARALELA:\n\t" << count << " números primos encontrados.\n\t" << t2<< " segundos de processamento.\n";
 
 
-	deallocMatrix(&matrix, N);
-	pthread_exit(NULL);
+	deallocMatrix(&matrix, N);			//DESALOCANDO MATRIZ
+	pthread_exit(NULL);			
 }

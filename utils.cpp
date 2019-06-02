@@ -5,7 +5,7 @@
 
 bool primeNumber(unsigned num){
 	if(num > 1){
-		for(int i = 2; i < num; i++)
+		for(int i = 2; i*i < num; i++)
 			if(!(num%i))
 				return false;
 		
@@ -26,7 +26,7 @@ unsigned **allocMatrix(unsigned size){
 void fillMatrix(unsigned **matrix, unsigned size){
 	for(int i = 0; i < size; i++)
 		for(int j = 0; j < size; j++)
-			matrix[i][j] = rand()%10;
+			matrix[i][j] = rand()%30000;
 }
 
 void deallocMatrix(unsigned ***matrix, unsigned size){
